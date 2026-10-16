@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Khahish - WhatsApp Clone</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        wa: {
+                            dark: '#111b21',
+                            panel: '#202c33',
+                            header: '#202c33',
+                            chat: '#0b141a',
+                            bubbleIn: '#202c33',
+                            bubbleOut: '#005c4b',
+                            green: '#00a884',
+                            lightGreen: '#25d366',
+                            text: '#e9edef',
+                            muted: '#8696a0',
+                            border: '#374151'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Font Inter & Font Awesome -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #0b141a; color: #e9edef; }
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(134, 150, 160, 0.3); border-radius: 3px; }
+        .chat-bg {
+            background-color: #0b141a;
+            background-image: radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 0);
+            background-size: 24px 24px;
+        }
+    </style>
+</head>
+<body class="h-screen overflow-hidden flex flex-col select-none">
+
+    <!-- NOTIFICATION MODAL -->
+    <div id="notification-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-wa-panel border border-wa-border rounded-2xl p-6 max-w-sm w-full shadow-2xl text-center">
+            <div id="modal-icon" class="w-12 h-12 rounded-full bg-wa-green/20 text-wa-green flex items-center justify-center mx-auto mb-4 text-xl">
+                <i class="fa-solid fa-bell"></i>
+            </div>
+            <h3 id="modal-title" class="text-lg font-bold mb-2 text-white">Notice</h3>
+            <p id="modal-message" class="text-sm text-wa-muted mb-6">Message goes here</p>
+            <button onclick="closeModal()" class="w-full py-2.5 bg-wa-green hover:bg-wa-lightGreen text-gray-900 font-semibold rounded-xl transition shadow-lg">OK</button>
+        </div>
+    </div>
+
+    <!-- AUDIO/VIDEO CALL OVERLAY SCREEN -->
+    <div id="call-screen" class="fixed inset-0 bg-gray-950 z-50 hidden flex flex-col justify-between p-6">
+        <div class="flex justify-between items-center text-white">
+            <div class="flex items-center space-x-2">
+                <i class="fa-solid fa-lock text-xs text-wa-muted"></i>
+                <span class="text-xs text-wa-muted">End-to-end encrypted</span>
+            </div>
+            <div id="call-type-badge" class="bg-wa-panel px-3 py-1 rounded-full text-xs font-medium">Video Call</div>
+            <button onclick="endCall()" class="p-2 text-wa-muted hover:text-white"><i class="fa-solid fa-minimize"></i></button>
+        </div>
+
+        <div class="flex flex-col items-center justify-center my-auto">
+            <img id="call-avatar" src="https://placehold.co/150x150/202c33/00a884?text=U" class="w-32 h-32 rounded-full object-cover border-4 border-wa-green shadow-2xl mb-6 animate-pulse" alt="Caller">
+            <h2 id="call-name" class="text-2xl font-bold text-white mb-2">Contact Name</h2>
+            <p id="call-status" class="text-wa-green font-medium text-sm animate-pulse">Ringing...</p>
+        </div>
+
+        <div class="flex justify-center items-center space-x-6 pb-8">
+            <button onclick="toggleCallMute()" id="call-mute-btn" class="w-14 h-14 rounded-full bg-wa-panel text-white hover:bg-gray-700 flex items-center justify-center text-xl transition shadow-lg">
+                <i class="fa-solid fa-microphone"></i>
+            </button>
+            <button onclick="endCall()" class="w-16 h-16 rounded-full bg-red-600 text-white hover:bg-red-700 flex items-center justify-center text-2xl transition shadow-xl">
+                <i class="fa-solid fa-phone-slash"></i>
+            </button>
+            <button onclick="toggleCallVideo()" id="call-video-btn" class="w-14 h-14 rounded-full bg-wa-panel text-white hover:bg-gray-700 flex items-center justify-center text-xl transition shadow-lg">
+                <i class="fa-solid fa-video"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- STORY / STATUS VIEWER OVERLAY -->
+    <div id="story-viewer" class="fixed inset-0 bg-black z-50 hidden flex flex-col justify-between p-4 md:p-8">
+        <div class="flex items-center justify-between z-10">
+            <div class="flex items-center space-x-3">
+                <img id="story-user-avatar" src="" class="w-10 h-10 rounded-full object-cover border border-wa-green" alt="Avatar">
+                <div>
+                    <h4 id="story-user-name" class="text-white font-bold text-sm">Name</h4>
+                    <span id="story-time" class="text-xs text-wa-muted">Just now</span>
+                </div>
+            </div>
+            <button onclick="closeStoryViewer()" class="text-white text-xl p-2"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        
+        <!-- Story Progress Bar -->
+        <div class="w-full bg-gray-700 h-1 rounded-full overflow-hidden absolute top-3 left-0 right-0 mx-4">
+            <div id="story-progress" class="bg-white h-full w-0 transition-all duration-linear"></div>
+        </div>
+
+        <div class="flex-1 flex items-center justify-center my-auto">
+            <div id="story-content-box" class="max-w-lg w-full text-center text-white text-2xl font-bold p-8">
+                Loading story...
+            </div>
+        </div>
+
+        <div class="flex justify-center pb-4">
+            <input type="text" placeholder="Reply to status..." class="max-w-md w-full bg-wa-panel text-white px-4 py-3 rounded-full border border-wa-border focus:outline-none">
+        </div>
+    </div>
+
+    <!-- MAIN APP WRAPPER -->
+    <div id="app-wrapper" class="flex-1 flex overflow-hidden">
+
+        <!-- AUTH SCREEN -->
+        <div id="auth-screen" class="fixed inset-0 bg-wa-dark z-40 flex items-center justify-center p-4">
+            <div class="bg-wa-panel border border-wa-border rounded-3xl p-8 max-w-md w-full shadow-2xl relative overflow-hidden">
+                <div class="absolute -top-12 -right-12 w-40 h-40 bg-wa-green/10 rounded-full blur-2xl"></div>
+                
+                <div class="text-center mb-8">
+                    <div class="w-20 h-20 bg-wa-green rounded-2xl mx-auto flex items-center justify-center text-gray-900 text-4xl shadow-xl shadow-wa-green/20 mb-4">
+                        <i class="fa-brands fa-whatsapp"></i>
+                    </div>
+                    <h1 class="text-3xl font-extrabold tracking-tight text-white">Khahish</h1>
+                    <p class="text-sm text-wa-muted mt-1">Connect instantly with your community</p>
+                </div>
+
+                <!-- Auth Tabs -->
+                <div class="flex rounded-xl bg-wa-chat p-1 mb-6 border border-wa-border">
+                    <button onclick="switchAuthTab('google')" id="tab-google-btn" class="flex-1 py-2 text-xs font-bold rounded-lg bg-wa-panel text-wa-green shadow transition">Google Sign-In</button>
+                    <button onclick="switchAuthTab('phone')" id="tab-phone-btn" class="flex-1 py-2 text-xs font-bold rounded-lg text-wa-muted transition">Mobile OTP</button>
+                </div>
+
+                <!-- Google Auth Form -->
+                <div id="auth-google-section" class="space-y-4">
+                    <button onclick="handleGoogleSignIn()" class="w-full py-3.5 bg-white hover:bg-gray-100 text-gray-900 font-bold rounded-xl shadow-lg transition flex items-center justify-center space-x-3">
+                        <i class="fa-brands fa-google text-red-500 text-lg"></i>
+                        <span>Sign in with Google</span>
+                    </button>
+                </div>
+
+                <!-- Phone OTP Auth Form -->
+                <div id="auth-phone-section" class="space-y-4 hidden">
+                    <div id="phone-input-group">
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-wa-muted mb-2">Mobile Number</label>
+                        <div class="flex space-x-2">
+                            <select class="px-3 py-3 rounded-xl border border-wa-border bg-wa-chat text-white text-sm focus:outline-none">
+                                <option>+92</option>
+                                <option>+1</option>
+                                <option>+44</option>
+                            </select>
+                            <input type="tel" id="phone-number-input" placeholder="300 1234567" class="flex-1 px-4 py-3 rounded-xl border border-wa-border bg-wa-chat text-white text-sm focus:outline-none focus:ring-2 focus:ring-wa-green">
+                        </div>
+                        <button onclick="sendOtp()" class="w-full mt-4 py-3 bg-wa-green hover:bg-wa-lightGreen text-gray-900 font-bold rounded-xl shadow-lg transition">Send Verification Code</button>
+                    </div>
+
+                    <div id="otp-input-group" class="hidden space-y-4">
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-wa-muted mb-2">Enter 6-digit OTP (Simulated: 123456)</label>
+                        <input type="text" id="otp-code-input" maxlength="6" placeholder="123456" class="w-full px-4 py-3 rounded-xl border border-wa-border bg-wa-chat text-white text-center text-xl tracking-widest focus:outline-none focus:ring-2 focus:ring-wa-green">
+                        <button onclick="verifyOtp()" class="w-full py-3 bg-wa-green hover:bg-wa-lightGreen text-gray-900 font-bold rounded-xl shadow-lg transition">Verify & Sign In</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- WHATSAPP SIDEBAR (Left Navigation & Chats) -->
+        <aside id="sidebar" class="w-full md:w-96 lg:w-[420px] bg-wa-panel border-r border-wa-border flex flex-col h-full z-10 absolute md:relative inset-y-0 left-0 transform -translate-x-full md:translate-x-0 transition-transform duration-300">
+            <!-- Sidebar Header -->
+            <div class="h-16 px-4 bg-wa-header border-b border-wa-border flex items-center justify-between">
+                <div class="flex items-center space-x-3 cursor-pointer" onclick="openProfileModal()">
+                    <img id="current-user-avatar" src="https://placehold.co/100x100/202c33/00a884?text=U" class="w-10 h-10 rounded-full object-cover border border-wa-green" alt="User">
+                    <span id="current-user-name" class="font-bold text-sm text-white">Khahish User</span>
+                </div>
+                <div class="flex items-center space-x-3 text-wa-muted text-lg">
+                    <button onclick="switchSidebarTab('status')" class="p-2 hover:text-white transition" title="Status Stories"><i class="fa-solid fa-circle-notch"></i></button>
+                    <button onclick="switchSidebarTab('calls')" class="p-2 hover:text-white transition" title="Calls"><i class="fa-solid fa-phone"></i></button>
+                    <button onclick="switchSidebarTab('chats')" class="p-2 hover:text-white transition text-wa-green" title="Chats"><i class="fa-solid fa-comment-alt"></i></button>
+                    <button onclick="logout()" class="p-2 hover:text-red-400 transition" title="Logout"><i class="fa-solid fa-right-from-bracket"></i></button>
+                </div>
+            </div>
+
+            <!-- Search / Filter Bar -->
+            <div class="p-3 bg-wa-panel border-b border-wa-border flex items-center space-x-2">
+                <div class="flex-1 flex items-center bg-wa-chat px-3 py-2 rounded-xl border border-wa-border">
+                    <i class="fa-solid fa-search text-wa-muted text-sm mr-3"></i>
+                    <input type="text" id="search-contacts" oninput="filterContacts(this.value)" placeholder="Search or start new chat" class="w-full bg-transparent text-sm text-white focus:outline-none">
+                </div>
+            </div>
+
+            <!-- SIDEBAR VIEWS (Chats, Status, Calls) -->
+            <div id="sidebar-views-container" class="flex-1 overflow-y-auto">
+                
+                <!-- CHATS VIEW -->
+                <div id="view-chats" class="divide-y divide-wa-border/50">
+                    <!-- Populated dynamically -->
+                </div>
+
+                <!-- STATUS VIEW -->
+                <div id="view-status" class="hidden p-4 space-y-6">
+                    <div class="flex items-center space-x-4 cursor-pointer" onclick="openAddStatusModal()">
+                        <div class="relative">
+                            <img id="my-status-avatar" src="" class="w-12 h-12 rounded-full object-cover border-2 border-wa-green">
+                            <div class="absolute bottom-0 right-0 bg-wa-green text-gray-900 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">+</div>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-white text-sm">My Status</h4>
+                            <p class="text-xs text-wa-muted">Click to add update</p>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-wa-muted mb-3">Recent Updates</h3>
+                        <div id="recent-statuses-list" class="space-y-3">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CALLS VIEW -->
+                <div id="view-calls" class="hidden p-4 space-y-4">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-wa-muted">Recent Calls</h3>
+                    </div>
+                    <div id="call-logs-list" class="space-y-3">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+
+            </div>
+        </aside>
+
+        <!-- CHAT AREA -->
+        <main class="flex-1 flex flex-col h-full bg-wa-chat chat-bg relative">
+            <!-- Chat Header -->
+            <header class="h-16 px-4 bg-wa-header border-b border-wa-border flex items-center justify-between z-10">
+                <div class="flex items-center space-x-3">
+                    <button onclick="toggleSidebar()" class="md:hidden p-2 text-wa-muted hover:text-white"><i class="fa-solid fa-bars text-lg"></i></button>
+                    <img id="active-chat-avatar" src="https://placehold.co/100x100/202c33/00a884?text=C" class="w-10 h-10 rounded-full object-cover" alt="Chat Avatar">
+                    <div>
+                        <h2 id="active-chat-name" class="font-bold text-sm text-white">Select a chat</h2>
+                        <p id="active-chat-status" class="text-xs text-wa-muted">online</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-5 text-wa-muted text-lg">
+                    <button onclick="startAudioCall()" class="p-2 hover:text-white transition" title="Voice Call"><i class="fa-solid fa-phone"></i></button>
+                    <button onclick="startVideoCall()" class="p-2 hover:text-white transition" title="Video Call"><i class="fa-solid fa-video"></i></button>
+                    <button onclick="toggleContactInfo()" class="p-2 hover:text-white transition" title="Contact Info"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+                </div>
+            </header>
+
+            <!-- Messages Stream -->
+            <div id="messages-container" class="flex-1 overflow-y-auto p-4 md:p-6 space-y-3">
+                <div class="flex flex-col items-center justify-center h-full text-center text-wa-muted">
+                    <i class="fa-brands fa-whatsapp text-6xl mb-3 text-wa-green/40"></i>
+                    <p class="text-lg font-medium text-white">Khahish Web for WhatsApp</p>
+                    <p class="text-xs">Send and receive messages seamlessly with end-to-end simulation.</p>
+                </div>
+            </div>
+
+            <!-- EMOJI PICKER POPUP -->
+            <div id="emoji-picker" class="absolute bottom-20 left-4 bg-wa-panel border border-wa-border rounded-2xl p-3 shadow-2xl hidden grid grid-cols-6 gap-2 z-20">
+                <button onclick="insertEmoji('😊')" class="p-2 hover:bg-gray-700 rounded-lg text-xl">😊</button>
+                <button onclick="insertEmoji('❤️')" class="p-2 hover:bg-gray-700 rounded-lg text-xl">❤️</button>
+                <button onclick="insertEmoji('👍')" class="p-2 hover:bg-gray-700 rounded-lg text-xl">👍</button>
+                <button onclick="insertEmoji('🔥')" class="p-2 hover:bg-gray-700 rounded-lg text-xl">🔥</button>
+                <button onclick="insertEmoji('✨')" class="p-2 hover:bg-gray-700 rounded-lg text-xl">✨</button>
+                <button onclick="insertEmoji('🎉')" class="p-2 hover:bg-gray-700 rounded-lg text-xl">🎉</button>
+            </div>
+
+            <!-- Chat Footer Input -->
+            <footer class="p-3 bg-wa-header border-t border-wa-border flex items-center space-x-3">
+                <button onclick="toggleEmojiPicker()" class="text-wa-muted hover:text-white p-2 text-xl"><i class="fa-regular fa-face-smile"></i></button>
+                <button onclick="triggerAttachment()" class="text-wa-muted hover:text-white p-2 text-xl"><i class="fa-solid fa-paperclip"></i></button>
+                <input type="file" id="media-file-input" accept="image/*,video/*,.pdf" class="hidden" onchange="handleMediaSelected(event)">
+                
+                <input type="text" id="message-input" autocomplete="off" placeholder="Type a message" class="flex-1 px-4 py-3 bg-wa-chat rounded-xl border border-wa-border text-sm text-white focus:outline-none">
+                
+                <button id="send-or-mic-btn" onclick="handleSendMessage()" class="text-wa-muted hover:text-white p-2 text-xl">
+                    <i id="send-icon" class="fa-solid fa-microphone"></i>
+                </button>
+            </footer>
+        </main>
+    </div>
+
+    <!-- ADD STATUS MODAL -->
+    <div id="add-status-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-wa-panel border border-wa-border rounded-3xl p-6 max-w-sm w-full shadow-2xl">
+            <h3 class="text-lg font-bold text-white mb-4">Post New Status</h3>
+            <div class="space-y-4">
+                <textarea id="status-text-input" placeholder="What's on your mind? Type status..." class="w-full h-28 p-3 rounded-xl bg-wa-chat border border-wa-border text-white text-sm focus:outline-none"></textarea>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-wa-muted mb-1">Or Image URL</label>
+                    <input type="url" id="status-image-input" placeholder="https://..." class="w-full px-3 py-2 rounded-xl bg-wa-chat border border-wa-border text-white text-sm focus:outline-none">
+                </div>
+                <div class="flex space-x-3 pt-2">
+                    <button onclick="closeAddStatusModal()" class="flex-1 py-2.5 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-xl text-sm">Cancel</button>
+                    <button onclick="submitStatus()" class="flex-1 py-2.5 bg-wa-green hover:bg-wa-lightGreen text-gray-900 font-bold rounded-xl text-sm shadow">Post</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK Imports & App Logic -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, getDocs, onSnapshot, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'khahish-wa-default';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "mock" };
+
+        let app, db, auth, currentUser = null;
+        let activeContact = null;
+        let unsubscribeMsgs = null;
+
+        const defaultContacts = [
+            { id: 'c1', name: 'Ayesha Khan', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150', status: 'Available', unread: 2, lastMsg: 'Asalam-o-Alaikum! Kaisi hain?' },
+            { id: 'c2', name: 'Muhammad Ali', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150', status: 'Busy', unread: 0, lastMsg: 'Project file send kr di hai.' },
+            { id: 'c3', name: 'Fatima Noor', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150', status: 'At Work 💻', unread: 1, lastMsg: 'Call me when free.' },
+            { id: 'c4', name: 'Islamic Reflections', avatar: 'https://placehold.co/150x150/00a884/ffffff?text=IR', status: 'Daily Quran & Hadith', unread: 5, lastMsg: 'Sabr aur Shukar ki ahmiyat...' }
+        ];
+
+        let mockStatuses = [
+            { id: 's1', userId: 'c1', name: 'Ayesha Khan', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150', text: 'Alhamdulillah for everything ✨', time: '2 hours ago' }
+        ];
+
+        let mockCalls = [
+            { id: 'cl1', name: 'Muhammad Ali', type: 'video', direction: 'incoming', time: 'Yesterday, 8:40 PM', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150' },
+            { id: 'cl2', name: 'Ayesha Khan', type: 'audio', direction: 'outgoing', time: 'May 12, 2:15 PM', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150' }
+        ];
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            try {
+                if (firebaseConfig && firebaseConfig.apiKey && firebaseConfig.apiKey !== "mock") {
+                    app = initializeApp(firebaseConfig);
+                    db = getFirestore(app);
+                    auth = getAuth(app);
+                    const token = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : undefined;
+                    if (token) await signInWithCustomToken(auth, token);
+                    else await signInAnonymously(auth);
+                }
+            } catch (e) {
+                console.warn("Firebase init skipped, running local state fallback:", e);
+            }
+
+            const savedUser = localStorage.getItem('khahish_wa_user');
+            if (savedUser) {
+                currentUser = JSON.parse(savedUser);
+                document.getElementById('auth-screen').classList.add('hidden');
+                initApp();
+            }
+        });
+
+        window.switchAuthTab = function(tab) {
+            if (tab === 'google') {
+                document.getElementById('auth-google-section').classList.remove('hidden');
+                document.getElementById('auth-phone-section').classList.add('hidden');
+                document.getElementById('tab-google-btn').className = 'flex-1 py-2 text-xs font-bold rounded-lg bg-wa-panel text-wa-green shadow transition';
+                document.getElementById('tab-phone-btn').className = 'flex-1 py-2 text-xs font-bold rounded-lg text-wa-muted transition';
+            } else {
+                document.getElementById('auth-google-section').classList.add('hidden');
+                document.getElementById('auth-phone-section').classList.remove('hidden');
+                document.getElementById('tab-phone-btn').className = 'flex-1 py-2 text-xs font-bold rounded-lg bg-wa-panel text-wa-green shadow transition';
+                document.getElementById('tab-google-btn').className = 'flex-1 py-2 text-xs font-bold rounded-lg text-wa-muted transition';
+            }
+        };
+
+        window.handleGoogleSignIn = function() {
+            currentUser = {
+                uid: 'g_' + Math.random().toString(36).substr(2, 9),
+                name: 'Google User',
+                avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
+                phone: '+92 300 1234567'
+            };
+            completeLogin();
+        };
+
+        window.sendOtp = function() {
+            const phone = document.getElementById('phone-number-input').value.trim();
+            if (!phone) return showModal("Error", "Please enter a valid mobile number.");
+            document.getElementById('phone-input-group').classList.add('hidden');
+            document.getElementById('otp-input-group').classList.remove('hidden');
+        };
+
+        window.verifyOtp = function() {
+            const otp = document.getElementById('otp-code-input').value.trim();
+            if (otp !== '123456') return showModal("Error", "Invalid OTP. Use demo code 123456");
+            currentUser = {
+                uid: 'ph_' + Math.random().toString(36).substr(2, 9),
+                name: 'Mobile User',
+                avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150',
+                phone: document.getElementById('phone-number-input').value
+            };
+            completeLogin();
+        };
+
+        function completeLogin() {
+            localStorage.setItem('khahish_wa_user', JSON.stringify(currentUser));
+            document.getElementById('auth-screen').classList.add('hidden');
+            initApp();
+        }
+
+        window.logout = function() {
+            localStorage.removeItem('khahish_wa_user');
+            location.reload();
+        };
+
+        function initApp() {
+            document.getElementById('current-user-name').innerText = currentUser.name;
+            document.getElementById('current-user-avatar').src = currentUser.avatar;
+            document.getElementById('my-status-avatar').src = currentUser.avatar;
+
+            renderContacts(defaultContacts);
+            renderStatuses();
+            renderCalls();
+            selectContact(defaultContacts[0]);
+        }
+
+        function renderContacts(contacts) {
+            const listEl = document.getElementById('view-chats');
+            listEl.innerHTML = '';
+            contacts.forEach(c => {
+                const isSelected = activeContact && activeContact.id === c.id;
+                const div = document.createElement('div');
+                div.className = `p-3 flex items-center space-x-3 cursor-pointer transition ${isSelected ? 'bg-wa-panel' : 'hover:bg-wa-panel/50'}`;
+                div.onclick = () => selectContact(c);
+                div.innerHTML = `
+                    <div class="relative">
+                        <img src="${c.avatar}" class="w-12 h-12 rounded-full object-cover">
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex justify-between items-baseline mb-1">
+                            <h4 class="font-bold text-sm text-white truncate">${c.name}</h4>
+                            <span class="text-[10px] text-wa-muted">12:45 PM</span>
+                        </div>
+                        <p class="text-xs text-wa-muted truncate">${c.lastMsg}</p>
+                    </div>
+                    ${c.unread > 0 ? `<span class="bg-wa-green text-gray-900 text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">${c.unread}</span>` : ''}
+                `;
+                listEl.appendChild(div);
+            });
+        }
+
+        window.selectContact = function(contact) {
+            activeContact = contact;
+            document.getElementById('active-chat-name').innerText = contact.name;
+            document.getElementById('active-chat-status').innerText = contact.status;
+            document.getElementById('active-chat-avatar').src = contact.avatar;
+            
+            loadMessages(contact.id);
+            if (window.innerWidth < 768) {
+                document.getElementById('sidebar').classList.add('-translate-x-full');
+            }
+        };
+
+        function loadMessages(contactId) {
+            const container = document.getElementById('messages-container');
+            container.innerHTML = '';
+            
+            const localMsgs = JSON.parse(localStorage.getItem('khahish_wa_msgs_' + contactId) || '[]');
+            if (localMsgs.length === 0 && contactId === 'c1') {
+                localMsgs.push({ sender: 'them', text: 'Asalam-o-Alaikum! Kaisi hain?', time: '12:30 PM' });
+            }
+
+            localMsgs.forEach(m => {
+                const isMe = m.sender === 'me';
+                const div = document.createElement('div');
+                div.className = `flex ${isMe ? 'justify-end' : 'justify-start'} mb-2`;
+                div.innerHTML = `
+                    <div class="max-w-[70%] p-3 rounded-2xl text-sm ${isMe ? 'bg-wa-bubbleOut text-white rounded-tr-none' : 'bg-wa-bubbleIn text-white rounded-tl-none'} shadow">
+                        <p class="break-words">${m.text}</p>
+                        <div class="text-[10px] text-wa-muted text-right mt-1">${m.time} <i class="fa-solid fa-check-double text-wa-green ml-1"></i></div>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+            container.scrollTop = container.scrollHeight;
+        }
+
+        window.handleSendMessage = function() {
+            const input = document.getElementById('message-input');
+            const text = input.value.trim();
+            if (!text || !activeContact) return;
+
+            const newMsg = { sender: 'me', text: text, time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) };
+            let localMsgs = JSON.parse(localStorage.getItem('khahish_wa_msgs_' + activeContact.id) || '[]');
+            localMsgs.push(newMsg);
+            localStorage.setItem('khahish_wa_msgs_' + activeContact.id, JSON.stringify(localMsgs));
+
+            input.value = '';
+            loadMessages(activeContact.id);
+        };
+
+        window.switchSidebarTab = function(tab) {
+            document.getElementById('view-chats').classList.add('hidden');
+            document.getElementById('view-status').classList.add('hidden');
+            document.getElementById('view-calls').classList.add('hidden');
+            document.getElementById('view-' + tab).classList.remove('hidden');
+        };
+
+        function renderStatuses() {
+            const list = document.getElementById('recent-statuses-list');
+            list.innerHTML = '';
+            mockStatuses.forEach(s => {
+                const div = document.createElement('div');
+                div.className = 'flex items-center space-x-3 cursor-pointer hover:bg-wa-panel/50 p-2 rounded-xl';
+                div.onclick = () => openStoryViewer(s);
+                div.innerHTML = `
+                    <img src="${s.avatar}" class="w-12 h-12 rounded-full object-cover border-2 border-wa-green">
+                    <div>
+                        <h4 class="font-bold text-white text-sm">${s.name}</h4>
+                        <p class="text-xs text-wa-muted">${s.time}</p>
+                    </div>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        window.openStoryViewer = function(story) {
+            document.getElementById('story-user-name').innerText = story.name;
+            document.getElementById('story-user-avatar').src = story.avatar;
+            document.getElementById('story-content-box').innerText = story.text;
+            document.getElementById('story-viewer').classList.remove('hidden');
+        };
+
+        window.closeStoryViewer = function() {
+            document.getElementById('story-viewer').classList.add('hidden');
+        };
+
+        window.openAddStatusModal = function() {
+            document.getElementById('add-status-modal').classList.remove('hidden');
+        };
+
+        window.closeAddStatusModal = function() {
+            document.getElementById('add-status-modal').classList.add('hidden');
+        };
+
+        window.submitStatus = function() {
+            const text = document.getElementById('status-text-input').value.trim();
+            if (!text) return;
+            mockStatuses.unshift({ id: 's_' + Date.now(), userId: currentUser.uid, name: currentUser.name, avatar: currentUser.avatar, text: text, time: 'Just now' });
+            closeAddStatusModal();
+            renderStatuses();
+            document.getElementById('status-text-input').value = '';
+        };
+
+        function renderCalls() {
+            const list = document.getElementById('call-logs-list');
+            list.innerHTML = '';
+            mockCalls.forEach(c => {
+                const div = document.createElement('div');
+                div.className = 'flex items-center justify-between p-2 hover:bg-wa-panel/50 rounded-xl';
+                div.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <img src="${c.avatar}" class="w-12 h-12 rounded-full object-cover">
+                        <div>
+                            <h4 class="font-bold text-white text-sm">${c.name}</h4>
+                            <p class="text-xs text-wa-muted"><i class="fa-solid fa-arrow-trend-up text-wa-green mr-1"></i> ${c.time}</p>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-${c.type === 'video' ? 'video' : 'phone'} text-wa-green"></i>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        window.startAudioCall = function() {
+            document.getElementById('call-type-badge').innerText = 'Audio Call';
+            document.getElementById('call-name').innerText = activeContact.name;
+            document.getElementById('call-avatar').src = activeContact.avatar;
+            document.getElementById('call-screen').classList.remove('hidden');
+        };
+
+        window.startVideoCall = function() {
+            document.getElementById('call-type-badge').innerText = 'Video Call';
+            document.getElementById('call-name').innerText = activeContact.name;
+            document.getElementById('call-avatar').src = activeContact.avatar;
+            document.getElementById('call-screen').classList.remove('hidden');
+        };
+
+        window.endCall = function() {
+            document.getElementById('call-screen').classList.add('hidden');
+        };
+
+        window.toggleSidebar = function() {
+            document.getElementById('sidebar').classList.toggle('-translate-x-full');
+        };
+
+        window.toggleEmojiPicker = function() {
+            document.getElementById('emoji-picker').classList.toggle('hidden');
+        };
+
+        window.insertEmoji = function(emoji) {
+            document.getElementById('message-input').value += emoji;
+            toggleEmojiPicker();
+        };
+
+        window.triggerAttachment = function() {
+            document.getElementById('media-file-input').click();
+        };
+
+        window.handleMediaSelected = function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                const newMsg = { sender: 'me', text: `📎 Shared Media: ${file.name}`, time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) };
+                let localMsgs = JSON.parse(localStorage.getItem('khahish_wa_msgs_' + activeContact.id) || '[]');
+                localMsgs.push(newMsg);
+                localStorage.setItem('khahish_wa_msgs_' + activeContact.id, JSON.stringify(localMsgs));
+                loadMessages(activeContact.id);
+            };
+            reader.readAsDataURL(file);
+        };
+
+        window.showModal = function(title, msg) {
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-message').innerText = msg;
+            document.getElementById('notification-modal').classList.remove('hidden');
+        };
+
+        window.closeModal = function() {
+            document.getElementById('notification-modal').classList.add('hidden');
+        };
+
+        window.filterContacts = function(q) {
+            const filtered = defaultContacts.filter(c => c.name.toLowerCase().includes(q.toLowerCase()));
+            renderContacts(filtered);
+        };
+    </script>
+</body>
+</html>
